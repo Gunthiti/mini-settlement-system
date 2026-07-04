@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: settlement
+      POSTGRES_USER: settlement
+      POSTGRES_PASSWORD: settlement
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U settlement -d settlement"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  transaction-api:
+    build: ./services/transaction-api
+    ports:
+      - "8081:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: settlement
+      DB_USER: settlement
+      DB_PASSWORD: settlement
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  settlement-worker:
+    build: ./services/settlement-worker
+    ports:
+      - "8082:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: settlement
+      DB_USER: settlement
+      DB_PASSWORD: settlement
+      # scheduled = stays running and settles every interval, like a
+      # traditional cron worker on a VM. See OneShotSettlementRunner /
+      # the CronJob manifest (Phase 3) for the K8s-native alternative.
+      SETTLEMENT_MODE: scheduled
+      SETTLEMENT_INTERVAL_MS: 30000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  report-service:
+    build: ./services/report-service
+    ports:
+      - "8083:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: settlement
+      DB_USER: settlement
+      DB_PASSWORD: settlement
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

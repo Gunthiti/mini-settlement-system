@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - postgres
+  - transaction-api
+  - settlement-worker
+  - report-service
+# Adds this label to metadata (and Pod templates) across every resource
+# without repeating it by hand everywhere. includeSelectors is explicitly
+# false: Deployment/CronJob selectors are immutable once created, so a
+# shared label like this should never be folded into them -- only
+# app.kubernetes.io/name (set per-resource) is used for selection.
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: mini-settlement-system
+    includeSelectors: false

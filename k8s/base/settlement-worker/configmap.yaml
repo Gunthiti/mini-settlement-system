@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: settlement-worker-config
+data:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: settlement
+  # oneshot, not scheduled: the Pod is expected to run one settlement pass
+  # and exit. Kubernetes -- via this CronJob resource -- is the scheduler
+  # here, not Spring's @Scheduled. See OneShotSettlementRunner.java.
+  SETTLEMENT_MODE: oneshot
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"

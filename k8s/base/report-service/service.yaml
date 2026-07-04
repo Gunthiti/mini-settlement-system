@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: report-service
+  labels:
+    app.kubernetes.io/name: report-service
+spec:
+  selector:
+    app.kubernetes.io/name: report-service
+  ports:
+    - port: 8080
+      targetPort: 8080

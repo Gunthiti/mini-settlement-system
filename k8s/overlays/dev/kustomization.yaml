@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mini-settlement-dev
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+# Phase 4's CI pipeline edits just this "newTag" line (via `kustomize edit
+# set image` or a plain sed/yq) after every build -- it never touches the
+# base manifests, so this file's git diff is the entire "deployment"
+# artifact for a GitOps controller to pick up.
+images:
+  - name: ghcr.io/your-org/mini-settlement-transaction-api
+    newTag: dev
+  - name: ghcr.io/your-org/mini-settlement-settlement-worker
+    newTag: dev
+  - name: ghcr.io/your-org/mini-settlement-report-service
+    newTag: dev
+
+patches:
+  # Faster feedback loop while developing: settle every 2 minutes instead
+  # of the base's 5, so you don't have to wait as long to see a result.
+  - target:
+      kind: CronJob
+      name: settlement-worker
+    patch: |-
+      - op: replace
+        path: /spec/schedule
+        value: "*/2 * * * *"

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: transaction-api-config
+data:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: settlement
+  # Lets the JVM size its heap as a percentage of the container's memory
+  # *limit* instead of the node's total memory -- without this, a JVM that
+  # doesn't know it's confined to e.g. 512Mi can still try to allocate a
+  # heap sized for the whole node and get OOMKilled.
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"

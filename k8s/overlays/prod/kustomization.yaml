@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mini-settlement-prod
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+images:
+  - name: ghcr.io/your-org/mini-settlement-transaction-api
+    newTag: stable
+  - name: ghcr.io/your-org/mini-settlement-settlement-worker
+    newTag: stable
+  - name: ghcr.io/your-org/mini-settlement-report-service
+    newTag: stable
+
+patches:
+  # HA: run 2 replicas of each stateless API behind their Service instead
+  # of dev's single replica.
+  - target:
+      kind: Deployment
+      name: transaction-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+  - target:
+      kind: Deployment
+      name: report-service
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2

@@ -1,0 +1,69 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: settlement-worker
+  labels:
+    app.kubernetes.io/name: settlement-worker
+spec:
+  # Every 5 minutes -- "batch job รันทุก N นาที" from the original brief.
+  schedule: "*/5 * * * *"
+  # Forbid: if a run is still going when the next one is due, skip the new
+  # one rather than starting a second settlement pass on top of the first.
+  # (Allow would run them concurrently; Replace would kill the old one and
+  # start fresh -- neither is safe for a job that mutates rows in place.)
+  concurrencyPolicy: Forbid
+  # If the CronJob controller itself was down and misses a scheduled time
+  # by more than this, don't bother trying to "catch up" -- just wait for
+  # the next tick.
+  startingDeadlineSeconds: 60
+  # Keep a small amount of Job/Pod history around for `kubectl describe` /
+  # `kubectl logs` debugging, instead of accumulating forever.
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      # Retry the Pod up to twice more (3 attempts total) if it exits non-zero
+      # before the Job is marked Failed.
+      backoffLimit: 2
+      # Safety net: if a run somehow hangs, kill it after 2 minutes rather
+      # than have it run forever and block the next scheduled tick (given
+      # concurrencyPolicy: Forbid above).
+      activeDeadlineSeconds: 120
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: settlement-worker
+        spec:
+          securityContext:
+            runAsNonRoot: true
+          # Job Pods run to completion, unlike a Deployment's Pods which are
+          # meant to stay up -- restartPolicy must be OnFailure or Never here.
+          restartPolicy: OnFailure
+          containers:
+            - name: settlement-worker
+              image: ghcr.io/your-org/mini-settlement-settlement-worker:latest
+              imagePullPolicy: IfNotPresent
+              envFrom:
+                - configMapRef:
+                    name: settlement-worker-config
+              env:
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-credentials
+                      key: POSTGRES_USER
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-credentials
+                      key: POSTGRES_PASSWORD
+              # No liveness/readiness probes: this Pod isn't meant to serve
+              # traffic or stay alive, so "is it ready for requests" doesn't
+              # apply. Success/failure is judged by the container's exit code.
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi

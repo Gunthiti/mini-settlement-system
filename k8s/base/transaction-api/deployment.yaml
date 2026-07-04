@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api
+  labels:
+    app.kubernetes.io/name: transaction-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: transaction-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: transaction-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: transaction-api
+          # Placeholder -- Phase 4's CI pipeline is what actually rewrites
+          # this tag after each build; see the "images:" block in the
+          # overlay kustomization.yaml files.
+          image: ghcr.io/your-org/mini-settlement-transaction-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: transaction-api-config
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+          # readinessProbe: "can this Pod take traffic right now?" -- fails
+          # here just pulls the Pod out of the Service's endpoints list,
+          # nothing gets restarted. Useful while the JVM/Hibernate is still
+          # warming up, or if a downstream dependency is temporarily down.
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+          # livenessProbe: "is this process still working, or should K8s
+          # kill and restart the container?" -- a failure here causes a
+          # restart, so it should only ever fail for genuinely-stuck
+          # processes (deadlock, unrecoverable state), not slow dependencies.
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
