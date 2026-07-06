@@ -39,15 +39,27 @@ spec:
                 secretKeyRef:
                   name: postgres-credentials
                   key: POSTGRES_PASSWORD
+          # startupProbe: while this is failing, K8s doesn't evaluate
+          # liveness/readiness at all, so a slow-starting JVM (Spring context
+          # + Hibernate metadata scanning, worse under a tight CPU limit like
+          # this container's 500m) can't get killed by livenessProbe before
+          # it's even finished booting. Once this succeeds once, it's never
+          # checked again for the life of the container -- liveness/readiness
+          # take over from there with their own, much tighter, timings.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 30 # allow up to 5*30=150s to start
           # readinessProbe: "can this Pod take traffic right now?" -- fails
           # here just pulls the Pod out of the Service's endpoints list,
-          # nothing gets restarted. Useful while the JVM/Hibernate is still
-          # warming up, or if a downstream dependency is temporarily down.
+          # nothing gets restarted. Useful while a downstream dependency is
+          # temporarily down.
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 8080
-            initialDelaySeconds: 20
             periodSeconds: 10
             failureThreshold: 3
           # livenessProbe: "is this process still working, or should K8s
@@ -58,7 +70,6 @@ spec:
             httpGet:
               path: /actuator/health/liveness
               port: 8080
-            initialDelaySeconds: 30
             periodSeconds: 15
             failureThreshold: 3
           resources:
