@@ -93,10 +93,34 @@ One-time repo setup once this is pushed to GitHub:
   **Packages** tab as *private* by default -- either make them public, or set up an
   `imagePullSecret` if a real cluster needs to pull them over the network.
 
+## ArgoCD (GitOps) on a local kind cluster
+
+```
+kind create cluster --config k8s/kind-cluster.yaml
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --server-side --force-conflicts
+
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+kubectl port-forward svc/argocd-server -n argocd 8080:443   # UI: https://localhost:8080, CLI: argocd login localhost:8080
+
+kubectl apply -f k8s/argocd/application-dev.yaml   # the Application CRD that watches k8s/overlays/dev
+```
+
+`k8s/argocd/application-dev.yaml` has `syncPolicy.automated` with `selfHeal: true` and
+`prune: true` -- ArgoCD polls this repo's `main` branch, applies new commits on its own, and
+reverts any manual `kubectl edit`/`scale` drift back to what git says.
+
+**Rollback**: `argocd app rollback <app> <history-id>` only works while auto-sync is *off*
+(`argocd app set <app> --sync-policy none`) -- ArgoCD refuses otherwise
+(`FailedPrecondition: rollback cannot be initiated when auto-sync is enabled`). Even then, a
+CLI rollback only fixes the *cluster*; git still points at the bad commit, so the next sync
+(or self-heal) reapplies it. The actual GitOps-correct rollback is `git revert` + push, then
+re-enable auto-sync (`argocd app set <app> --sync-policy automated --self-heal --auto-prune`).
+
 ## Status
 
 - [x] Phase 1 — project structure + multi-stage Dockerfiles
 - [x] Phase 2 — docker-compose for local dev
 - [x] Phase 3 — Kubernetes manifests (Kustomize base/overlays)
 - [x] Phase 4 — GitHub Actions CI
-- [ ] Phase 5 — ArgoCD (GitOps)
+- [x] Phase 5 — ArgoCD (GitOps)
