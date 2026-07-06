@@ -15,13 +15,17 @@ RUN mvn -B -q clean package -DskipTests
 FROM eclipse-temurin:17-jre-alpine AS runtime
 
 # Alpine's JRE image ships no default non-root user; create one so the
-# process never runs as root inside the container.
-RUN addgroup -S spring && adduser -S spring -G spring
+# process never runs as root inside the container. Numeric UID/GID (not
+# just a named user) matters here: Kubernetes' securityContext.runAsNonRoot
+# check (see the base Deployment manifests) can only verify statically from
+# the image metadata that the default user is non-root when it's numeric --
+# a named user fails that check with "cannot verify user is non-root".
+RUN addgroup -g 1000 -S spring && adduser -u 1000 -S spring -G spring
 
 WORKDIR /app
 COPY --from=builder --chown=spring:spring /build/target/transaction-api.jar app.jar
 
-USER spring:spring
+USER 1000:1000
 EXPOSE 8080
 
 # This HEALTHCHECK is for local `docker run`/`docker compose` use only --

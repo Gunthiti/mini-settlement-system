@@ -1,0 +1,35 @@
+# The ArgoCD Application CRD itself -- this is what you'd normally apply
+# once, by hand or via an "app of apps" pattern, to bootstrap ArgoCD into
+# watching this project. It is deliberately NOT deployed by the CI pipeline
+# in .github/workflows/ci.yml (see the notes there on push vs pull).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mini-settlement-dev
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/Gunthiti/mini-settlement-system.git
+    targetRevision: main
+    path: k8s/overlays/dev
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mini-settlement-dev
+
+  syncPolicy:
+    # automated = auto-sync: ArgoCD polls the repo (default every 3 minutes,
+    # plus a webhook can push it instantly) and applies any new commit
+    # without a human running `kubectl apply`/`argocd sync` by hand.
+    automated:
+      # selfHeal = if someone runs `kubectl edit`/`kubectl delete` directly
+      # against the cluster, ArgoCD treats that as drift from git and
+      # reverts it back to match the repo, instead of just reporting it.
+      selfHeal: true
+      # prune = if a resource is removed from the manifests in git, delete
+      # it from the cluster too, instead of leaving it there forever.
+      prune: true
+    syncOptions:
+      - CreateNamespace=true

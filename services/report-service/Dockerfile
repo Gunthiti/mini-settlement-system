@@ -11,12 +11,15 @@ RUN mvn -B -q clean package -DskipTests
 # ---- Stage 2: run the jar on a minimal JRE-only image -----------------
 FROM eclipse-temurin:17-jre-alpine AS runtime
 
-RUN addgroup -S spring && adduser -S spring -G spring
+# Numeric UID/GID so Kubernetes' runAsNonRoot check can verify statically
+# from image metadata -- a named user fails that check (see transaction-api's
+# Dockerfile for the full explanation).
+RUN addgroup -g 1000 -S spring && adduser -u 1000 -S spring -G spring
 
 WORKDIR /app
 COPY --from=builder --chown=spring:spring /build/target/report-service.jar app.jar
 
-USER spring:spring
+USER 1000:1000
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
