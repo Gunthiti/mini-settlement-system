@@ -4,8 +4,8 @@ kind: Kustomization
 namespace: mini-settlement-dev
 
 resources:
-  - namespace.yaml
-  - ../../base
+- namespace.yaml
+- ../../base
 
 # Phase 4's CI pipeline edits just the "newName"/"newTag" lines (via
 # `kustomize edit set image`) after every build -- it never touches the
@@ -14,23 +14,23 @@ resources:
 # placeholder image in base/*/deployment.yaml + cronjob.yaml; "newName"
 # is where this actually gets pushed (ghcr.io lowercases the account name).
 images:
-  - name: ghcr.io/your-org/mini-settlement-transaction-api
-    newName: ghcr.io/gunthiti/mini-settlement-transaction-api
-    newTag: dev
-  - name: ghcr.io/your-org/mini-settlement-settlement-worker
-    newName: ghcr.io/gunthiti/mini-settlement-settlement-worker
-    newTag: dev
-  - name: ghcr.io/your-org/mini-settlement-report-service
-    newName: ghcr.io/gunthiti/mini-settlement-report-service
-    newTag: dev
+- name: ghcr.io/your-org/mini-settlement-report-service
+  newName: ghcr.io/gunthiti/mini-settlement-report-service
+  newTag: 97d1f03
+- name: ghcr.io/your-org/mini-settlement-settlement-worker
+  newName: ghcr.io/gunthiti/mini-settlement-settlement-worker
+  newTag: 97d1f03
+- name: ghcr.io/your-org/mini-settlement-transaction-api
+  newName: ghcr.io/gunthiti/mini-settlement-transaction-api
+  newTag: 97d1f03
 
-patches:
   # Faster feedback loop while developing: settle every 2 minutes instead
   # of the base's 5, so you don't have to wait as long to see a result.
-  - target:
-      kind: CronJob
-      name: settlement-worker
-    patch: |-
-      - op: replace
-        path: /spec/schedule
-        value: "*/2 * * * *"
+patches:
+- patch: |-
+    - op: replace
+      path: /spec/schedule
+      value: "*/2 * * * *"
+  target:
+    kind: CronJob
+    name: settlement-worker
