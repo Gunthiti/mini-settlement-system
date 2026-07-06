@@ -16,13 +16,13 @@ resources:
 images:
 - name: ghcr.io/your-org/mini-settlement-report-service
   newName: ghcr.io/gunthiti/mini-settlement-report-service
-  newTag: 97d1f03
+  newTag: 7200f68
 - name: ghcr.io/your-org/mini-settlement-settlement-worker
   newName: ghcr.io/gunthiti/mini-settlement-settlement-worker
-  newTag: 97d1f03
+  newTag: 7200f68
 - name: ghcr.io/your-org/mini-settlement-transaction-api
   newName: ghcr.io/gunthiti/mini-settlement-transaction-api
-  newTag: 97d1f03
+  newTag: 7200f68
 
   # Faster feedback loop while developing: settle every 2 minutes instead
   # of the base's 5, so you don't have to wait as long to see a result.
