@@ -51,7 +51,11 @@ spec:
               path: /actuator/health/readiness
               port: 8080
             periodSeconds: 5
-            failureThreshold: 30 # allow up to 5*30=150s to start
+            # This is generous (5 min) because this is a shared-CPU laptop
+            # kind cluster running everything at once (ArgoCD + 3 services +
+            # Postgres); observed a 167s startup here. A dedicated cluster
+            # would tune this much tighter.
+            failureThreshold: 60 # allow up to 5*60=300s to start
           # readinessProbe: "can this Pod take traffic right now?" -- fails
           # here just pulls the Pod out of the Service's endpoints list,
           # nothing gets restarted. Useful while a downstream dependency is

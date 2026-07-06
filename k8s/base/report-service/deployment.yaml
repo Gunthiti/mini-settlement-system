@@ -43,7 +43,9 @@ spec:
               path: /actuator/health/readiness
               port: 8080
             periodSeconds: 5
-            failureThreshold: 30 # allow up to 5*30=150s to start
+            # Generous for the same reason as transaction-api's startupProbe
+            # -- shared-CPU laptop kind cluster, not a dedicated one.
+            failureThreshold: 60 # allow up to 5*60=300s to start
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
