@@ -22,7 +22,7 @@ images:
   newTag: 7200f68
 - name: ghcr.io/your-org/mini-settlement-transaction-api
   newName: ghcr.io/gunthiti/mini-settlement-transaction-api
-  newTag: does-not-exist
+  newTag: 7200f68
 
   # Faster feedback loop while developing: settle every 2 minutes instead
   # of the base's 5, so you don't have to wait as long to see a result.
