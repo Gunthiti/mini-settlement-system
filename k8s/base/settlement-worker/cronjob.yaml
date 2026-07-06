@@ -25,10 +25,13 @@ spec:
       # Retry the Pod up to twice more (3 attempts total) if it exits non-zero
       # before the Job is marked Failed.
       backoffLimit: 2
-      # Safety net: if a run somehow hangs, kill it after 2 minutes rather
-      # than have it run forever and block the next scheduled tick (given
-      # concurrencyPolicy: Forbid above).
-      activeDeadlineSeconds: 120
+      # Safety net: if a run somehow hangs, kill it eventually rather than
+      # have it run forever and block the next scheduled tick (given
+      # concurrencyPolicy: Forbid above). 300s here (not a tighter value)
+      # because this Job pays the same slow-JVM-boot cost as the
+      # Deployments' startupProbe on this shared-CPU laptop kind cluster --
+      # a dedicated cluster would tune this much lower.
+      activeDeadlineSeconds: 300
       template:
         metadata:
           labels:
