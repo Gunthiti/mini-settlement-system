@@ -31,13 +31,22 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  # OCI/Docker repository names must be all-lowercase; github.repository_owner
-  # preserves whatever case the account/org actually uses (e.g. "Gunthiti"),
-  # so it has to be lowercased explicitly or GHCR rejects the push with
-  # "repository name must be lowercase".
-  IMAGE_PREFIX: ghcr.io/${{ toLower(github.repository_owner) }}/mini-settlement
 
 jobs:
+  # GitHub Actions' expression language has no toLower()/toUpper() function
+  # (unlike e.g. Azure DevOps), so lowercasing github.repository_owner --
+  # OCI/Docker repository names must be all-lowercase, but the owner's actual
+  # casing (e.g. "Gunthiti") is preserved in that context -- has to happen in
+  # a real shell step instead, using bash's ${VAR,,} lowercasing.
+  vars:
+    name: compute image prefix
+    runs-on: ubuntu-latest
+    outputs:
+      image_prefix: ${{ steps.set.outputs.image_prefix }}
+    steps:
+      - id: set
+        run: echo "image_prefix=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/mini-settlement" >> "$GITHUB_OUTPUT"
+
   test:
     name: build + test (${{ matrix.service }})
     runs-on: ubuntu-latest
@@ -59,7 +68,7 @@ jobs:
 
   build-and-push:
     name: build + push image (${{ matrix.service }})
-    needs: test
+    needs: [test, vars]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
@@ -68,6 +77,8 @@ jobs:
     strategy:
       matrix:
         service: [transaction-api, settlement-worker, report-service]
+    env:
+      IMAGE_PREFIX: ${{ needs.vars.outputs.image_prefix }}
     outputs:
       short_sha: ${{ steps.sha.outputs.short_sha }}
     steps:
@@ -103,11 +114,13 @@ jobs:
 
   update-manifests:
     name: update dev image tags
-    needs: build-and-push
+    needs: [build-and-push, vars]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      IMAGE_PREFIX: ${{ needs.vars.outputs.image_prefix }}
     steps:
       - uses: actions/checkout@v4
         with:
