@@ -7,16 +7,21 @@ resources:
   - namespace.yaml
   - ../../base
 
-# Phase 4's CI pipeline edits just this "newTag" line (via `kustomize edit
-# set image` or a plain sed/yq) after every build -- it never touches the
+# Phase 4's CI pipeline edits just the "newName"/"newTag" lines (via
+# `kustomize edit set image`) after every build -- it never touches the
 # base manifests, so this file's git diff is the entire "deployment"
-# artifact for a GitOps controller to pick up.
+# artifact for a GitOps controller to pick up. "name" here matches the
+# placeholder image in base/*/deployment.yaml + cronjob.yaml; "newName"
+# is where this actually gets pushed (ghcr.io lowercases the account name).
 images:
   - name: ghcr.io/your-org/mini-settlement-transaction-api
+    newName: ghcr.io/gunthiti/mini-settlement-transaction-api
     newTag: dev
   - name: ghcr.io/your-org/mini-settlement-settlement-worker
+    newName: ghcr.io/gunthiti/mini-settlement-settlement-worker
     newTag: dev
   - name: ghcr.io/your-org/mini-settlement-report-service
+    newName: ghcr.io/gunthiti/mini-settlement-report-service
     newTag: dev
 
 patches:

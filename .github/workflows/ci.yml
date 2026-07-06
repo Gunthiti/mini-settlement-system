@@ -31,7 +31,11 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/mini-settlement
+  # OCI/Docker repository names must be all-lowercase; github.repository_owner
+  # preserves whatever case the account/org actually uses (e.g. "Gunthiti"),
+  # so it has to be lowercased explicitly or GHCR rejects the push with
+  # "repository name must be lowercase".
+  IMAGE_PREFIX: ghcr.io/${{ toLower(github.repository_owner) }}/mini-settlement
 
 jobs:
   test:
@@ -122,10 +126,14 @@ jobs:
         working-directory: k8s/overlays/dev
         run: |
           SHA="${{ needs.build-and-push.outputs.short_sha }}"
+          # left side of "=" must match the placeholder "name:" already in
+          # this overlay's images: block (ghcr.io/your-org/...), so kustomize
+          # updates that entry's newName/newTag in place instead of adding a
+          # second, unmatched one.
           kustomize edit set image \
-            "${IMAGE_PREFIX}-transaction-api=${IMAGE_PREFIX}-transaction-api:${SHA}" \
-            "${IMAGE_PREFIX}-settlement-worker=${IMAGE_PREFIX}-settlement-worker:${SHA}" \
-            "${IMAGE_PREFIX}-report-service=${IMAGE_PREFIX}-report-service:${SHA}"
+            "ghcr.io/your-org/mini-settlement-transaction-api=${IMAGE_PREFIX}-transaction-api:${SHA}" \
+            "ghcr.io/your-org/mini-settlement-settlement-worker=${IMAGE_PREFIX}-settlement-worker:${SHA}" \
+            "ghcr.io/your-org/mini-settlement-report-service=${IMAGE_PREFIX}-report-service:${SHA}"
 
       # This is the ONLY thing this workflow deploys anywhere: a git commit.
       # No `kubectl apply`, no cluster credentials in this repo at all --

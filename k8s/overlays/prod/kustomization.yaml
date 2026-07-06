@@ -9,10 +9,13 @@ resources:
 
 images:
   - name: ghcr.io/your-org/mini-settlement-transaction-api
+    newName: ghcr.io/gunthiti/mini-settlement-transaction-api
     newTag: stable
   - name: ghcr.io/your-org/mini-settlement-settlement-worker
+    newName: ghcr.io/gunthiti/mini-settlement-settlement-worker
     newTag: stable
   - name: ghcr.io/your-org/mini-settlement-report-service
+    newName: ghcr.io/gunthiti/mini-settlement-report-service
     newTag: stable
 
 patches:
